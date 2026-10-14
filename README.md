@@ -16,7 +16,7 @@ in Herdr's sidebar:
 | *(nothing)* | not a project baa knows; it stays quiet |
 
 <!-- TODO: replace with a recording -->
-![baa in the Herdr sidebar](assets/demo.gif)
+![baa in the Herdr sidebar](https://raw.githubusercontent.com/rsdlt/baa/main/assets/demo.gif)
 
 ## Install
 
