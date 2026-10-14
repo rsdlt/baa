@@ -18,14 +18,21 @@ in Herdr's sidebar:
 <!-- TODO: replace with a recording -->
 ![baa in the Herdr sidebar](https://raw.githubusercontent.com/rsdlt/baa/main/assets/demo.gif)
 
+## Requirements
+
+- **Herdr 0.8.0 or newer.** 0.7.4 added the metadata tokens and popups baa uses, and
+  0.8.0 resolves plugin commands relative to the plugin. Colouring `$baa` (below) needs
+  Herdr 0.9.0.
+- **Linux or macOS.**
+- **Rust 1.89 or newer**, to build baa.
+
 ## Install
 
 ```sh
 herdr plugin install rsdlt/baa
 ```
 
-This builds baa with `cargo build --release`, so you need a Rust toolchain (1.89 or
-newer). It requires Herdr 0.8.0 or newer, on Linux or macOS.
+This builds baa with `cargo build --release`.
 
 The `baa` binary is also on crates.io as `cargo install herdr-baa`. The plugin itself
 always runs the copy it builds, so you only need this to run `baa` by hand.
@@ -131,9 +138,11 @@ description = "baa: last check output"
 ## How it works
 
 baa subscribes to `pane.agent_status_changed`. A turn counts as finished on `done`, or
-on `working` → `idle`. The hook itself only decides and hands off to a detached worker,
-so Herdr is never kept waiting. The worker holds a per-project file lock, runs the check
-with a timeout, and writes the token to every agent pane in that project.
+on `working` → `idle`. The check runs inside the hook. Herdr runs hooks off its UI
+thread, so the UI never waits, and baa leaves no background processes behind. A
+per-project file lock means only one check runs per project; a hook that finds the lock
+taken just leaves a request for the running check to pick up, and exits. The check runs
+with a timeout, and the token goes to every agent pane in that project.
 
 State (last status per pane, last output per project, and a log) lives in
 `HERDR_PLUGIN_STATE_DIR`. Anything that goes wrong (no toolchain, a missing binary, a
