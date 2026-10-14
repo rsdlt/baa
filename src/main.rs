@@ -5,5 +5,6 @@ mod detect;
 mod herdr;
 mod parse;
 mod run;
+mod state;
 
 fn main() {}
