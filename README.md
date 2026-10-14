@@ -1,19 +1,19 @@
-# baa
+# baa 🐑
 
 **uh-oh or all good.**
 
-A tiny [Herdr](https://herdr.dev) plugin. When a coding agent finishes its turn, baa
-checks that the agent's project still compiles and shows the verdict next to the agent
-in Herdr's sidebar:
+Your agents' sheepdog. [Herdr](https://herdr.dev) herds your coding agents; baa keeps an
+ear on the flock. Every time an agent finishes a turn, baa checks that its project still
+compiles and bleats the verdict next to the agent in Herdr's sidebar:
 
-| Token | Meaning |
+| Bleat | Meaning |
 |---|---|
-| `…` | checking |
-| `✓` | all good |
+| `…` | sniffing around (checking) |
+| `✓` | all good, the flock is safe |
 | `✗ 3` | uh-oh: 3 errors |
-| `✗` | uh-oh, error count unknown |
-| `⏱` | the check timed out |
-| *(nothing)* | not a project baa knows; it stays quiet |
+| `✗` | uh-oh, but the count got lost in the field |
+| `⏱` | the check wandered off (timed out) |
+| *(nothing)* | not a pasture baa knows, so it stays quiet |
 
 ![baa in the Herdr sidebar](https://raw.githubusercontent.com/rsdlt/baa/main/assets/demo.gif)
 
@@ -26,6 +26,8 @@ in Herdr's sidebar:
 - **Rust 1.89 or newer**, to build baa.
 
 ## Install
+
+Bring the sheepdog home:
 
 ```sh
 herdr plugin install rsdlt/baa
@@ -40,9 +42,9 @@ cargo build --release
 herdr plugin link .
 ```
 
-## Show `$baa` in the sidebar
+## Give baa a voice in the sidebar
 
-baa reports a pane metadata token called `baa`. Herdr shows it once you add `$baa` to the
+A sheepdog nobody can hear isn't much use. baa reports a pane metadata token called `baa`. Herdr shows it once you add `$baa` to the
 Agent sidebar rows in `~/.config/herdr/config.toml`. For example, to put it after the
 agent name in the default layout:
 
@@ -56,7 +58,7 @@ rows = [
 
 Then run `herdr server reload-config`, or choose *reload config* from the global menu.
 
-On Herdr 0.9.0 and newer you can also colour it:
+On Herdr 0.9.0 and newer you can also colour it, so a red `✗` stands out from across the field:
 
 ```toml
 [ui.sidebar.agents]
@@ -70,7 +72,7 @@ rows = [
 ]
 ```
 
-## What gets checked
+## Which pastures baa knows
 
 baa walks up from the agent's working directory to the nearest project root and uses the
 first match:
@@ -81,14 +83,15 @@ first match:
 | `Cargo.toml` | `cargo check --message-format=short` | lines with `: error[` / `: error:` |
 | `tsconfig.json` | the project's own `node_modules/.bin/tsc --noEmit` | lines with `: error TS` |
 
-baa never installs anything and never runs `package.json` scripts on its own. If a
-project has no local `tsc`, baa stays quiet. Checks time out after 60 seconds. Note that
+baa is a well-behaved sheepdog: it never installs anything and never runs `package.json`
+scripts on its own. If a project has no local `tsc`, baa stays quiet. Checks time out after 60 seconds. Note that
 `cargo check` writes to the project's `target/` like any other cargo build.
 
 Every agent working in the same project shows the same verdict. If several agents finish
-while a check is running, baa runs one more check when it ends, not one per agent.
+while a check is running, baa runs one more check when it ends, not one per agent. One
+bleat for the whole flock is plenty.
 
-### `.baa.toml`
+### Teaching new tricks: `.baa.toml`
 
 Drop a `.baa.toml` at a project root to use your own check or tune the built-in one. Every
 field is optional:
@@ -104,7 +107,7 @@ Without `command`, the built-in check for that directory runs with your other se
 > **Note:** override commands run as your user, with your permissions, every time an agent
 > finishes a turn. Only put commands in `.baa.toml` that you would run yourself.
 
-## Actions
+## Commands baa answers to
 
 Run an action with `herdr plugin action invoke <id>`:
 
@@ -131,7 +134,7 @@ command = "rsdlt.baa.details"
 description = "baa: last check output"
 ```
 
-## How it works
+## Under the fleece
 
 baa subscribes to `pane.agent_status_changed`. A turn counts as finished on `done`, or
 on `working` → `idle`. The check runs inside the hook. Herdr runs hooks off its UI
@@ -143,7 +146,8 @@ with a timeout, and the token goes to every agent pane in that project.
 State (last status per pane, last output per project, and a log) lives in
 `HERDR_PLUGIN_STATE_DIR`. Anything that goes wrong (no toolchain, a missing binary, a
 malformed event) is written to `baa.log` there and to `herdr plugin log list --plugin
-rsdlt.baa`. baa never crashes or shows a noisy error.
+rsdlt.baa`. baa never crashes or shows a noisy error: a sheepdog that barks at
+everything isn't one you keep.
 
 ## License
 
