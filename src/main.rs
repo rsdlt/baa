@@ -3,5 +3,6 @@
 
 mod detect;
 mod parse;
+mod run;
 
 fn main() {}
