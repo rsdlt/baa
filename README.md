@@ -103,13 +103,30 @@ Without `command`, the built-in check for that directory runs with your other se
 
 ## Actions
 
-Open Herdr's command palette and look for:
+Run an action with `herdr plugin action invoke <id>`:
 
-- **baa: check this project now**: re-check the focused pane's project.
-- **baa: show last check output**: open a popup with the last check's full output
-  (press `q` to close).
-- **baa: clear tokens and saved state**: remove every `$baa` token and everything baa
-  has saved.
+| Action id | What it does |
+|---|---|
+| `rsdlt.baa.check` | Re-check the focused pane's project now. |
+| `rsdlt.baa.details` | Open a popup with the last check's full output (`q` closes it). |
+| `rsdlt.baa.clear` | Remove every `$baa` token and everything baa has saved. |
+
+"Focused" means the pane Herdr has focus on, so run `check` and `details` from the agent
+pane you mean. To bind them to keys, add this to `~/.config/herdr/config.toml`:
+
+```toml
+[[keys.command]]
+key = "prefix+b"
+type = "plugin_action"
+command = "rsdlt.baa.check"
+description = "baa: check this project"
+
+[[keys.command]]
+key = "prefix+shift+b"
+type = "plugin_action"
+command = "rsdlt.baa.details"
+description = "baa: last check output"
+```
 
 ## How it works
 
