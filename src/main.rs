@@ -10,7 +10,6 @@ mod state;
 use std::env;
 use std::error::Error;
 use std::io::{self, Write};
-use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Command, ExitCode, Stdio};
 use std::time::{Duration, Instant};
@@ -22,7 +21,7 @@ use state::{Project, State};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn Error>>;
 
-/// Extra life for the `…` token beyond the check's own timeout, so it can't outlive a dead worker.
+/// Extra life for the `…` token beyond the check's timeout, so it can't outlive a killed baa.
 const CHECKING_GRACE: Duration = Duration::from_secs(10);
 
 const USAGE: &str = "usage: baa <on-event | check | open-details | details | clear>";
@@ -35,8 +34,6 @@ fn main() -> ExitCode {
         ["details"] => details(),
         ["open-details"] => open_details(),
         ["clear"] => clear(),
-        // Internal: started detached by the commands above.
-        ["worker", root] => worker(Path::new(root)),
         _ => {
             eprintln!("{USAGE}");
             return ExitCode::from(2);
@@ -54,8 +51,7 @@ fn main() -> ExitCode {
     }
 }
 
-/// Event hook: when an agent's turn ends, queue a check of its project.
-/// Herdr waits for hooks, so this only decides and hands off; it never runs a check.
+/// Event hook: when an agent's turn ends, check its project.
 fn on_event() -> Result {
     let state = State::from_env()?;
     let json = env::var("HERDR_PLUGIN_EVENT_JSON")?;
@@ -66,7 +62,7 @@ fn on_event() -> Result {
     }
     let herdr = Herdr::from_env()?;
     let pane = herdr.pane(&change.pane_id)?;
-    queue_check(&state, &herdr, &pane)
+    check_pane(&state, &herdr, &pane)
 }
 
 /// Action: re-check the focused pane's project now.
@@ -74,7 +70,7 @@ fn check_focused() -> Result {
     let state = State::from_env()?;
     let herdr = Herdr::from_env()?;
     let pane = herdr.pane(&focused_pane_id()?)?;
-    queue_check(&state, &herdr, &pane)
+    check_pane(&state, &herdr, &pane)
 }
 
 /// Action: open the `details` popup. Actions can't open panes themselves.
@@ -113,43 +109,26 @@ fn clear() -> Result {
     Ok(())
 }
 
-/// Background worker: run the project's pending checks, publishing each verdict.
-fn worker(root: &Path) -> Result {
-    let state = State::from_env()?;
-    let herdr = Herdr::from_env()?;
-    let project = state.project(root)?;
+/// Checks the project `pane` works in. If a check for it is already running, that
+/// one runs again when it ends instead, and this returns at once.
+///
+/// This runs inside the hook or action itself: Herdr runs plugin commands off its UI
+/// thread, and its docs ask plugins not to leave detached processes behind.
+fn check_pane(state: &State, herdr: &Herdr, pane: &Pane) -> Result {
+    let Some(root) = pane.cwd().and_then(detect::find_root) else {
+        // Not a project baa knows (any more): don't leave an old verdict behind.
+        if pane.tokens.contains_key(herdr::TOKEN) {
+            herdr.clear_token(&pane.pane_id)?;
+        }
+        return Ok(());
+    };
+    let project = state.project(&root)?;
+    project.request()?;
     state::run_pending(&project, || {
-        if let Err(e) = check_once(&state, &herdr, &project, root) {
+        if let Err(e) = check_once(state, herdr, &project, &root) {
             state.log(&format!("{}: {e}", root.display()));
         }
     })?;
-    Ok(())
-}
-
-fn queue_check(state: &State, herdr: &Herdr, pane: &Pane) -> Result {
-    match pane.cwd().and_then(detect::find_root) {
-        Some(root) => {
-            state.project(&root)?.request()?;
-            spawn_worker(&root)
-        }
-        // Not a project baa knows (any more): don't leave an old verdict behind.
-        None if pane.tokens.contains_key(herdr::TOKEN) => Ok(herdr.clear_token(&pane.pane_id)?),
-        None => Ok(()),
-    }
-}
-
-/// Starts `baa worker <root>` in the background and returns at once. The worker gets
-/// no stdio: Herdr waits for a hook's output pipes to close, so inheriting them would
-/// hold the hook open for the whole check.
-fn spawn_worker(root: &Path) -> Result {
-    Command::new(env::current_exe()?)
-        .arg("worker")
-        .arg(root)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .process_group(0)
-        .spawn()?;
     Ok(())
 }
 
