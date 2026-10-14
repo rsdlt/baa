@@ -280,6 +280,13 @@ mod tests {
         );
         fs::write(&bin, script).unwrap();
         fs::set_permissions(&bin, fs::Permissions::from_mode(0o755)).unwrap();
+        // Linux won't run a file that is still open for writing (ETXTBSY), and a test
+        // forking on another thread can briefly inherit our handle. Wait until it runs.
+        while let Err(e) = Command::new(&bin).output() {
+            assert_eq!(e.raw_os_error(), Some(libc::ETXTBSY), "{e}");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        fs::remove_file(&log).unwrap();
         (dir, Herdr::new(bin, "rsdlt.baa"))
     }
 
