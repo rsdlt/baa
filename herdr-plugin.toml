@@ -1,0 +1,43 @@
+id = "rsdlt.baa"
+name = "baa"
+version = "0.1.0"
+# 0.7.4 added metadata tokens and popup panes; 0.8.0 resolves relative commands
+# from the plugin root.
+min_herdr_version = "0.8.0"
+description = "uh-oh or all good: after each agent turn, show whether its project still compiles."
+platforms = ["linux", "macos"]
+
+# Runs on `herdr plugin install` only. After `herdr plugin link`, build it yourself.
+[[build]]
+command = ["cargo", "build", "--release"]
+
+# Fires on every agent status change; baa itself picks out finished turns.
+[[events]]
+on = "pane.agent_status_changed"
+command = ["./target/release/baa", "on-event"]
+
+[[actions]]
+id = "check"
+title = "baa: check this project now"
+contexts = ["pane"]
+command = ["./target/release/baa", "check"]
+
+[[actions]]
+id = "details"
+title = "baa: show last check output"
+contexts = ["pane"]
+command = ["./target/release/baa", "open-details"]
+
+[[actions]]
+id = "clear"
+title = "baa: clear tokens and saved state"
+contexts = ["global"]
+command = ["./target/release/baa", "clear"]
+
+[[panes]]
+id = "details"
+title = "baa: last check"
+placement = "popup"
+width = "80%"
+height = "70%"
+command = ["./target/release/baa", "details"]
