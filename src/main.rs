@@ -2,6 +2,7 @@
 //! still compiles and show the verdict as `$baa` in Herdr's agent sidebar.
 
 mod detect;
+mod herdr;
 mod parse;
 mod run;
 
