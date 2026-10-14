@@ -89,22 +89,22 @@ struct Response<T> {
 
 pub struct Herdr {
     bin: PathBuf,
-    /// Identifies baa's metadata reports; Herdr keeps reports from different sources apart.
-    source: String,
+    /// Also the `--source` of baa's metadata reports, which Herdr keeps apart from others'.
+    plugin_id: String,
 }
 
 impl Herdr {
-    pub fn new(bin: impl Into<PathBuf>, source: impl Into<String>) -> Self {
+    pub fn new(bin: impl Into<PathBuf>, plugin_id: impl Into<String>) -> Self {
         Self {
             bin: bin.into(),
-            source: source.into(),
+            plugin_id: plugin_id.into(),
         }
     }
 
     pub fn from_env() -> Result<Self, String> {
         let bin = env::var_os("HERDR_BIN_PATH").ok_or("HERDR_BIN_PATH is not set")?;
-        let source = env::var("HERDR_PLUGIN_ID").unwrap_or_else(|_| "rsdlt.baa".into());
-        Ok(Self::new(bin, source))
+        let plugin_id = env::var("HERDR_PLUGIN_ID").unwrap_or_else(|_| "rsdlt.baa".into());
+        Ok(Self::new(bin, plugin_id))
     }
 
     pub fn pane(&self, pane_id: &str) -> Result<Pane, String> {
@@ -143,8 +143,28 @@ impl Herdr {
         self.report_metadata(pane_id, &["--clear-token", TOKEN])
     }
 
+    /// Opens one of this plugin's `[[panes]]` entrypoints.
+    pub fn open_pane(&self, entrypoint: &str) -> Result<(), String> {
+        let args = [
+            "plugin",
+            "pane",
+            "open",
+            "--plugin",
+            &self.plugin_id,
+            "--entrypoint",
+            entrypoint,
+        ];
+        self.call(&args).map(drop)
+    }
+
     fn report_metadata(&self, pane_id: &str, args: &[&str]) -> Result<(), String> {
-        let mut full = vec!["pane", "report-metadata", pane_id, "--source", &self.source];
+        let mut full = vec![
+            "pane",
+            "report-metadata",
+            pane_id,
+            "--source",
+            &self.plugin_id,
+        ];
         full.extend(args);
         self.call(&full).map(drop)
     }
@@ -272,18 +292,20 @@ mod tests {
     }
 
     #[test]
-    fn reports_tokens() {
+    fn reports_tokens_and_opens_panes() {
         let (dir, herdr) = fake_herdr("{}");
         herdr.set_token("w1:p1", "✗ 3", None).unwrap();
         herdr
             .set_token("w1:p1", "…", Some(Duration::from_secs(70)))
             .unwrap();
         herdr.clear_token("w1:p1").unwrap();
+        herdr.open_pane("details").unwrap();
         assert_eq!(
             calls(&dir),
             "pane report-metadata w1:p1 --source rsdlt.baa --token baa=✗ 3\n\
              pane report-metadata w1:p1 --source rsdlt.baa --token baa=… --ttl-ms 70000\n\
-             pane report-metadata w1:p1 --source rsdlt.baa --clear-token baa\n"
+             pane report-metadata w1:p1 --source rsdlt.baa --clear-token baa\n\
+             plugin pane open --plugin rsdlt.baa --entrypoint details\n"
         );
     }
 
