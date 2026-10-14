@@ -19,8 +19,8 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 pub enum Counter {
     Cargo,
     Tsc,
-    /// Count lines starting with this text, ignoring leading whitespace.
-    Prefix(String),
+    /// Count lines containing this text.
+    Contains(String),
     /// No count: the exit code alone decides.
     ExitCode,
 }
@@ -82,8 +82,8 @@ struct Override {
     /// Replaces the built-in command, e.g. `["just", "check"]`.
     command: Option<Vec<String>>,
     timeout_secs: Option<u64>,
-    /// Counts output lines starting with this text as errors.
-    count_prefix: Option<String>,
+    /// Output lines containing this text count as errors, e.g. `": error"`.
+    error_marker: Option<String>,
 }
 
 /// The nearest directory, from `start` upwards, that holds an override or a toolchain marker.
@@ -124,7 +124,9 @@ pub fn detect(start: &Path) -> Result<Option<Check>, String> {
     if command.is_empty() {
         return Err(format!("{OVERRIDE_FILE}: command must not be empty"));
     }
-    let counter = config.count_prefix.map_or(default_counter, Counter::Prefix);
+    let counter = config
+        .error_marker
+        .map_or(default_counter, Counter::Contains);
 
     Ok(Some(Check {
         root,
@@ -228,13 +230,13 @@ mod tests {
     }
 
     #[test]
-    fn override_can_add_a_count_prefix() {
+    fn override_can_add_an_error_marker() {
         let dir = project(&[(
             OVERRIDE_FILE,
-            "command = [\"ruff\", \"check\"]\ncount_prefix = \"error\"\n",
+            "command = [\"ruff\", \"check\"]\nerror_marker = \": error\"\n",
         )]);
         let check = detect(dir.path()).unwrap().unwrap();
-        assert_eq!(check.counter, Counter::Prefix("error".into()));
+        assert_eq!(check.counter, Counter::Contains(": error".into()));
     }
 
     #[test]

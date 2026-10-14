@@ -1,0 +1,4 @@
+    Checking broken v0.1.0 (/home/dev/broken)
+src/main.rs:2:9: warning: unused variable: `x`: help: if this is intentional, prefix it with an underscore: `_x`
+warning: `broken` (bin "broken") generated 1 warning (run `cargo fix --bin "broken" -p broken` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.03s

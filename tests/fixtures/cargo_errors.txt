@@ -1,0 +1,5 @@
+    Checking broken v0.1.0 (/home/dev/broken)
+src/main.rs:4:13: error[E0425]: cannot find value `missing_var` in this scope: not found in this scope
+src/main.rs:2:18: error[E0308]: mismatched types: expected `i32`, found `&str`
+src/main.rs:3:5: error[E0425]: cannot find function `undefined_fn` in this scope: not found in this scope
+error: could not compile `broken` (bin "broken") due to 3 previous errors

@@ -2,5 +2,6 @@
 //! still compiles and show the verdict as `$baa` in Herdr's agent sidebar.
 
 mod detect;
+mod parse;
 
 fn main() {}

@@ -1,0 +1,2 @@
+tsconfig.json(1,2): error TS1136: Property assignment expected.
+tsconfig.json(2,1): error TS1005: '}' expected.
