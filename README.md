@@ -1,5 +1,7 @@
 # baa 🐑
 
+[![CI](https://github.com/rsdlt/baa/actions/workflows/ci.yml/badge.svg)](https://github.com/rsdlt/baa/actions/workflows/ci.yml)
+
 **uh-oh or all good.**
 
 Your agents' sheepdog. [Herdr](https://herdr.dev) herds your coding agents; baa keeps an

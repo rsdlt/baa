@@ -10,13 +10,9 @@ env:
 
 jobs:
   check:
-    name: Check (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        # The platforms declared in herdr-plugin.toml.
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    name: Check
+    # Linux only: hosted macOS runners can queue for a long time.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
