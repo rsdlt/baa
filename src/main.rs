@@ -59,9 +59,7 @@ fn main() -> ExitCode {
 fn on_event() -> Result {
     let state = State::from_env()?;
     let json = env::var("HERDR_PLUGIN_EVENT_JSON")?;
-    let Some(change) = herdr::parse_status_change(&json)? else {
-        return Ok(());
-    };
+    let change = herdr::parse_status_change(&json)?;
     let previous = state.swap_pane_status(&change.pane_id, &change.agent_status)?;
     if !herdr::turn_finished(previous.as_deref(), &change.agent_status) {
         return Ok(());

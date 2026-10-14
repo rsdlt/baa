@@ -14,7 +14,9 @@ use serde::de::DeserializeOwned;
 /// The metadata token baa owns; users show it with `$baa` in a sidebar row.
 pub const TOKEN: &str = "baa";
 
-const STATUS_EVENT: &str = "pane.agent_status_changed";
+/// The event's name inside `HERDR_PLUGIN_EVENT_JSON`. Careful: the manifest subscribes
+/// with the dotted form, `pane.agent_status_changed`, but the payload uses snake_case.
+const STATUS_EVENT: &str = "pane_agent_status_changed";
 
 /// The part of a `pane.agent_status_changed` event baa needs.
 #[derive(Debug, PartialEq, Eq, Deserialize)]
@@ -23,18 +25,19 @@ pub struct StatusChange {
     pub agent_status: String,
 }
 
-/// Parses `HERDR_PLUGIN_EVENT_JSON`, returning `None` for any other event.
-pub fn parse_status_change(json: &str) -> serde_json::Result<Option<StatusChange>> {
+/// Parses `HERDR_PLUGIN_EVENT_JSON`. baa subscribes to this one event only,
+/// so any other event is an error worth logging, not something to skip quietly.
+pub fn parse_status_change(json: &str) -> Result<StatusChange, String> {
     #[derive(Deserialize)]
     struct Envelope {
         event: String,
         data: serde_json::Value,
     }
-    let envelope: Envelope = serde_json::from_str(json)?;
+    let envelope: Envelope = serde_json::from_str(json).map_err(|e| e.to_string())?;
     if envelope.event != STATUS_EVENT {
-        return Ok(None);
+        return Err(format!("unexpected event {:?}", envelope.event));
     }
-    serde_json::from_value(envelope.data).map(Some)
+    serde_json::from_value(envelope.data).map_err(|e| e.to_string())
 }
 
 /// Whether a status change ends an agent's turn.
@@ -197,23 +200,26 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
 
     #[test]
-    fn parses_status_changes_and_ignores_other_events() {
-        let json = r#"{"event":"pane.agent_status_changed","data":{"type":"pane_agent_status_changed",
+    fn parses_status_changes_and_rejects_anything_else() {
+        // Shaped like Herdr's `EventEnvelope`: snake_case event name, `type`-tagged data.
+        let json = r#"{"event":"pane_agent_status_changed","data":{"type":"pane_agent_status_changed",
             "pane_id":"w8:p1","workspace_id":"w8","agent_status":"done","agent":"claude",
             "display_agent":null,"title":null,"state_labels":{},"something_new":1}}"#;
         assert_eq!(
-            parse_status_change(json).unwrap(),
-            Some(StatusChange {
+            parse_status_change(json),
+            Ok(StatusChange {
                 pane_id: "w8:p1".into(),
                 agent_status: "done".into()
             })
         );
 
-        let other = r#"{"event":"pane.focused","data":{"type":"pane_focused","pane_id":"w8:p1"}}"#;
-        assert_eq!(parse_status_change(other).unwrap(), None);
-
+        // The dotted name only appears in the manifest, never in the payload.
+        let dotted = json.replacen("pane_agent_status_changed", "pane.agent_status_changed", 1);
+        assert!(parse_status_change(&dotted).is_err());
+        let other = r#"{"event":"pane_focused","data":{"type":"pane_focused","pane_id":"w8:p1"}}"#;
+        assert!(parse_status_change(other).is_err());
         assert!(parse_status_change("not json").is_err());
-        let missing = r#"{"event":"pane.agent_status_changed","data":{"pane_id":"w8:p1"}}"#;
+        let missing = r#"{"event":"pane_agent_status_changed","data":{"pane_id":"w8:p1"}}"#;
         assert!(parse_status_change(missing).is_err());
     }
 
