@@ -33,9 +33,6 @@ herdr plugin install rsdlt/baa
 
 This builds baa with `cargo build --release`.
 
-The `baa` binary is also on crates.io as `cargo install herdr-baa`. The plugin itself
-always runs the copy it builds, so you only need this to run `baa` by hand.
-
 To hack on baa, link a checkout instead. `link` doesn't run the build step, so build first:
 
 ```sh
